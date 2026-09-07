@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Musharaka Scenario Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#F6F7F4; --panel:#FFFFFF; --line:#DDE0D8; --line-soft:#EBEDE7;
+  --ink:#191C1A; --ink-2:#4A514C; --ink-3:#7C837D;
+  /* hue encodes meaning: green = you keep it, clay = it is gone */
+  --equity:#0F6E5C; --rent:#B0764F; --taxins:#5A7695; --upkeep:#A79E93; --hoa:#7C6A8A;
+  --numin-bg:#fff; --numin-line:#c9c4bb;
+  --accent:#0F6E5C; --warn:#B07A12; --bad:#A33B2A;
+  --shadow:0 1px 2px rgba(25,28,26,.06),0 8px 24px -12px rgba(25,28,26,.18);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#121512; --panel:#1B1F1C; --line:#2E342F; --line-soft:#252A26;
+    --ink:#EEF1EC; --ink-2:#AFB6B0; --ink-3:#7E867F;
+    --equity:#3FA88F; --rent:#D2986E; --taxins:#8AA6C2; --upkeep:#9A9187; --hoa:#A791B8;
+    --accent:#3FA88F; --warn:#D9A93C; --bad:#D4705C;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121512; --panel:#1B1F1C; --line:#2E342F; --line-soft:#252A26;
+  --ink:#EEF1EC; --ink-2:#AFB6B0; --ink-3:#7E867F;
+  --equity:#3FA88F; --rent:#D2986E; --taxins:#8AA6C2; --upkeep:#9A9187; --hoa:#A791B8;
+  --accent:#3FA88F; --warn:#D9A93C; --bad:#D4705C;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+}
+.numin{width:100%;margin-top:6px;padding:5px 7px;font:inherit;font-size:13px;
+  border:1px solid var(--numin-line,#c9c4bb);border-radius:6px;
+  background:var(--numin-bg,#fff);color:inherit}
+@media (prefers-color-scheme:dark){.numin{background:#221f1a;border-color:#3a362e}}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:400 15px/1.55 "IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 64px}
+
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px 18px;margin-bottom:6px}
+h1{
+  font:400 40px/1.05 "Instrument Serif",Georgia,serif;
+  margin:0; letter-spacing:-.01em; text-wrap:balance;
+}
+.sub{color:var(--ink-2);max-width:66ch;margin:8px 0 20px;font-size:14.5px}
+.topnav{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:0 0 20px}
+.topnav a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+  font:500 13px/1 "IBM Plex Sans",system-ui,sans-serif;color:var(--ink-2);
+  border:1px solid var(--line);border-radius:999px;padding:7px 13px;
+  background:var(--panel);transition:color .12s ease,border-color .12s ease}
+.topnav a:hover{color:var(--accent);border-color:var(--accent)}
+.topnav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.badge{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
+  font:500 12px/1 "IBM Plex Mono",monospace;letter-spacing:.02em;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink-2);
+}
+.badge b{color:var(--equity);font-weight:500}
+.badge.fail b{color:var(--bad)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--equity)}
+.badge.fail .dot{background:var(--bad)}
+
+.grid{display:grid;grid-template-columns:296px minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+/* Grid items default to min-width:auto, so a wide table or chart inside them
+   stretches the column past the viewport instead of scrolling. */
+.grid>main,.grid>.rail{min-width:0}
+
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.rail{padding:18px;position:sticky;top:20px}
+@media (max-width:900px){.rail{position:static}}
+.rail h2,.card h2{
+  font:600 11px/1 "IBM Plex Sans",sans-serif;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 14px
+}
+.rail section+section{margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)}
+
+.ctl{margin-bottom:15px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.ctl .nm{font-size:13.5px;color:var(--ink-2)}
+.ctl .val{font:500 13px/1 "IBM Plex Mono",monospace;color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);height:20px;cursor:pointer}
+select{
+  width:100%;padding:7px 9px;border-radius:7px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);font:400 13.5px/1.2 inherit;cursor:pointer
+}
+.chk{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.chk input{margin:3px 0 0;accent-color:var(--accent);cursor:pointer}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{
+  padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:transparent;
+  color:var(--ink-2);font:500 12.5px/1 inherit;cursor:pointer;transition:.15s
+}
+.presets button:hover{border-color:var(--accent);color:var(--accent)}
+.presets button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:22px}
+.stat{background:var(--panel);padding:14px 16px}
+.stat .k{font:600 10.5px/1 "IBM Plex Sans";letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.stat .v{font:500 25px/1.15 "IBM Plex Mono",monospace;margin-top:7px;font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em}
+.stat .n{font-size:12px;color:var(--ink-3);margin-top:3px}
+.stat.flag .v{color:var(--bad)}
+.stat.good .v{color:var(--equity)}
+
+.card{padding:18px 18px 8px;margin-bottom:22px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 12px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:3px}
+.hint{margin:7px 0 0;font-size:11.5px;line-height:1.45;color:var(--ink-3)}
+.hint b{color:var(--warn);font-weight:600}
+.sweeprow{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px}
+.sweeprow select{width:auto;min-width:170px}
+.answer{font:500 13.5px/1.4 "IBM Plex Sans";color:var(--ink-2)}
+.answer b{font-family:"IBM Plex Mono",monospace;color:var(--equity);font-weight:500}
+.answer.none b{color:var(--bad)}
+#sweep{height:190px}
+input[type=range]:disabled{opacity:.55;cursor:not-allowed}
+canvas{width:100%;height:280px;display:block}
+#chart{touch-action:pan-y}
+
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;
+  font-variant-numeric:tabular-nums}
+th,td{padding:7px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line-soft)}
+th{font:600 10.5px/1.3 "IBM Plex Sans";letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);text-align:right;position:sticky;top:0;background:var(--panel)}
+th:first-child,td:first-child{text-align:left}
+td{font-family:"IBM Plex Mono",monospace}
+tr.under td{background:color-mix(in srgb,var(--bad) 9%,transparent)}
+tr.peak td{font-weight:500;box-shadow:inset 2px 0 0 var(--accent)}
+
+.notes{margin-top:26px;padding:16px 18px;border-left:2px solid var(--warn);
+  background:var(--panel);border-radius:0 10px 10px 0;font-size:13.5px;color:var(--ink-2)}
+.notes h3{font:600 11px/1 "IBM Plex Sans";letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 10px}
+.notes p{margin:0 0 9px}.notes p:last-child{margin:0}
+.notes b{color:var(--ink);font-weight:600}
+code{font:400 12.5px/1 "IBM Plex Mono",monospace;background:var(--line-soft);padding:1px 5px;border-radius:4px}
+.warnbox{margin:0 0 18px;padding:11px 14px;border-radius:8px;font-size:13.5px;
+  background:color-mix(in srgb,var(--warn) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--warn) 38%,transparent);color:var(--ink)}
+
+[hidden]{display:none!important}
+
+/* ---------------------------------------------------------------- phones */
+@media (max-width:640px){
+  .wrap{padding:16px 14px 44px}
+  h1{font-size:28px;line-height:1.1}
+  .sub{font-size:13.5px;margin:6px 0 14px}
+  .topnav{gap:7px;margin:0 0 14px}
+  .topnav a{padding:8px 13px}
+  .grid{gap:16px}
+  /* the answers first, the controls underneath them */
+  .grid>main{order:1}
+  .grid>.rail{order:2}
+  .rail{padding:15px}
+  .stats{grid-template-columns:repeat(auto-fit,minmax(136px,1fr));margin-bottom:16px}
+  .stat{padding:12px 13px}
+  .stat .v{font-size:21px}
+  .card{padding:15px 14px 6px;margin-bottom:16px}
+  canvas{height:210px}
+  #sweep{height:160px}
+  table{font-size:12px}
+  th,td{padding:6px 7px}
+  .ctl{margin-bottom:17px}
+  /* a range that a thumb can actually hit */
+  input[type=range]{height:32px}
+  /* 16px is the threshold below which iOS Safari zooms the page on focus */
+  .numin,select{font-size:16px;padding:8px 9px}
+  .legend{gap:10px;font-size:12px}
+  .sweeprow select{width:100%;min-width:0}
+}
+
+/* ---- control tooltips ---- */
+.tipbtn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+  margin-left:5px;padding:0;flex:none;vertical-align:middle;border-radius:50%;
+  border:1px solid var(--line);background:transparent;color:var(--ink-3);
+  font:600 10px/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer}
+.tipbtn:hover,.tipbtn[aria-expanded=true]{border-color:var(--accent);color:var(--accent)}
+#tip{position:fixed;z-index:99;max-width:272px;padding:9px 11px;border-radius:8px;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink-2);
+  font:400 12.5px/1.5 "IBM Plex Sans",system-ui,sans-serif;
+  box-shadow:var(--shadow);pointer-events:none}
+#tip b{color:var(--ink);font-weight:600}
+@media (max-width:640px){
+  .tipbtn{width:20px;height:20px;font-size:11px;margin-left:6px}
+  #tip{max-width:min(300px,calc(100vw - 26px));font-size:13px;padding:10px 12px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav class="topnav">
+  <a href="index.html">← All tools</a>
+  <a href="exit_explorer.html">Exit &amp; Breakeven →</a>
+</nav>
+<header>
+  <h1>Musharaka Scenario Explorer</h1>
+  <span class="badge" id="valid"><span class="dot"></span><span id="validtxt">checking…</span></span>
+</header>
+<p class="sub">Every month of a 15-year diminishing-musharaka purchase, under assumptions
+you set.</p>
+
+<div class="grid">
+  <aside class="panel rail">
+    <section>
+      <h2>Preset</h2>
+      <div class="presets" id="presets"></div>
+    </section>
+    <section>
+      <h2>The house</h2>
+      <div class="ctl"><label><span class="nm" data-tip="What you pay for the house. Everything else on this page scales off it.">Purchase price</span><span class="val" id="v_price"></span></label>
+        <input type="range" id="price" min="180000" max="360000" step="5000">
+        <input type="number" id="price_n" class="numin" min="50000" max="2000000" step="1000"
+               aria-label="Purchase price, exact"></div>
+      <div class="ctl"><label><span class="nm" data-tip="Your cash at closing. It is also your <b>starting ownership share</b> — 20% down means you own 20% on day one.">Down payment</span><span class="val" id="v_down"></span></label>
+        <input type="range" id="down" min="10" max="35" step="1"></div>
+      <div class="ctl"><label><span class="nm" data-tip="<b>The entire market rent for the house — not what you pay.</b> You pay this times the share Neeyah still owns, so your rent starts high and falls toward zero as you buy in.">Starting rent / mo</span><span class="val" id="v_rent"></span></label>
+        <input type="range" id="rent" min="1200" max="2600" step="1">
+        <label class="chk" style="margin-top:7px"><input type="checkbox" id="linkrent" checked>
+          <span>Follow Neeyah's <b>Cedar Rapids</b> table &mdash; <code>$283 + 0.617%</code> of price</span></label>
+        <p class="hint" id="renthint"></p></div>
+    </section>
+    <section>
+      <h2>How things move</h2>
+      <div class="ctl"><label><span class="nm" data-tip="How fast the whole market rent rises each year. What you are <em>charged</em> is capped at 5%/yr by the agreement.">Rent growth</span><span class="val" id="v_rg"></span></label>
+        <input type="range" id="rg" min="0" max="5" step="0.01"></div>
+      <div class="ctl"><label><span class="nm" data-tip="How much the house gains in value each year. It feeds <b>two</b> numbers: a capped one that prices your buyouts, and an uncapped one behind upkeep.">Appreciation</span><span class="val" id="v_ap"></span></label>
+        <input type="range" id="ap" min="-3" max="10" step="0.01">
+        <p class="hint">How fast the house gains value each year. It feeds <b>two</b> numbers.
+        The one that prices your buyouts can only rise 5% a year. The other follows the real
+        market with no limit, and upkeep follows that one, because a real roof costs what a
+        real roof costs. Above 5% the two split apart. Both fall without
+        limit.</p></div>
+      <div class="ctl"><label><span class="nm" data-tip="How fast the premium rises each year. <b>Assumed, no source.</b>">Insurance growth</span><span class="val" id="v_ig"></span></label>
+        <input type="range" id="ig" min="0" max="15" step="0.01"></div>
+      <div class="ctl"><label><span class="nm" data-tip="How fast your take-home rises each year. This is <b>a life plan, not a forecast</b> — set it to 0 to see the deal without any raise carrying it.">Your income growth</span><span class="val" id="v_incg"></span></label>
+        <input type="range" id="incg" min="0" max="6" step="0.01"></div>
+    </section>
+    <section>
+      <h2>You</h2>
+      <div class="ctl"><label><span class="nm" data-tip="Repairs and maintenance each year, as a share of what the house is worth. <b>A rough estimate, not a quote.</b> Neeyah's share of the shared repairs is already taken out, so do not reduce it again. It is a smooth line here; real repairs are lumpy.">Upkeep / yr of value</span><span class="val" id="v_up"></span></label>
+        <input type="range" id="up" min="0" max="2.5" step="0.01">
+        <p class="hint">Default <b>1.1% is a rough estimate, not a quote.</b> Repairs also do not arrive
+      smoothly: a furnace is not $200 a month, it is $7,000 in one go.
+      ⚠️ Neeyah's share of the shared repairs is <b>already taken out of this number</b>, so
+      do not reduce it again for your ownership.</p></div>
+      <div class="ctl"><label><span class="nm" data-tip="Association dues. <b>100% yours, however much of the house you own</b> — dues, late fees, penalties and special assessments. 0 means no association.">HOA dues / mo</span><span class="val" id="v_hoa"></span></label>
+        <input type="range" id="hoa" min="0" max="600" step="5" value="50">
+        <input type="number" id="hoa_n" class="numin" min="0" max="5000" step="1" value="50"
+               aria-label="HOA dues per month, exact">
+        <p class="hint">0 = no association. <b>100% yours, however much of the house you own.</b>
+        Dues, late fees, penalties and special assessments all sit with the resident, so at 20%
+        owned you pay 20% of the tax bill but all of a special assessment.</p></div>
+      <div class="ctl"><label><span class="nm" data-tip="How fast the dues rise each year. <b>Assumed, no source.</b> Dues follow the association's own costs and get re-voted.">HOA growth</span><span class="val" id="v_hoag"></span></label>
+        <input type="range" id="hoag" min="0" max="10" step="0.1" value="3">
+        <p class="hint">Assumed. No source.</p></div>
+      <div class="ctl"><label><span class="nm" data-tip="Your pay after tax, base only.">Take-home / mo</span><span class="val" id="v_inc"></span></label>
+        <input type="range" id="inc" min="4000" max="12000" step="1">
+        <input type="number" id="inc_n" class="numin" min="0" max="60000" step="1"
+               aria-label="Take-home per month, exact">
+        <p class="hint">Base pay only, bonus excluded. <b>The value shipped here is a
+        placeholder</b> &mdash; type your own.</p></div>
+      <div class="ctl"><label><span class="nm" data-tip="What has to be left over after housing every month. Your line, not a rule.">Floor: keep at least</span><span class="val" id="v_floor"></span></label>
+        <input type="range" id="floor" min="2000" max="8000" step="100">
+        <input type="number" id="floor_n" class="numin" min="0" max="60000" step="1"
+               aria-label="Monthly floor, exact">
+        <p class="hint">What has to be left after housing every month. Type your own.
+        A $1,000 move here is worth roughly $100,000 of purchase price
+        &mdash; more than every other assumption combined.</p></div>
+    </section>
+    <section>
+      <h2>Contract switches</h2>
+      <div class="ctl"><label><span class="nm" data-tip="How Neeyah passes an expense overrun back to you. <b>Unresolved:</b> the two agreements point this at two different rent figures, so it is a three-way switch here rather than a fixed choice.">Expense Adjustment</span></label>
+        <select id="ea">
+          <option value="annual">Annual — recomputed each year</option>
+          <option value="permanent">Permanent — folds into the base</option>
+          <option value="off">Off</option>
+        </select></div>
+      <div class="ctl"><label><span class="nm" data-tip="Market rent can rise more than 5% in a year, but you are only charged 5%. Does the extra vanish, or wait and arrive later? <b>The agreement never says.</b> At a steady rate the two are identical — use the hot-year slider to see them split.">Excess above the 5% rent cap</span></label>
+        <select id="rcm">
+          <option value="forgiven">Forgiven — the cap is a real limit</option>
+          <option value="carried" selected>Carried — the cap only delays the rise</option>
+        </select>
+        <p class="hint"><b>Unresolved</b> &mdash; the agreement never says where the excess goes.
+        At a steady growth rate the two are
+        identical, because rent rises 5%/yr either way. The difference only shows after a
+        hot year, so set one below.</p></div>
+      <div class="ctl"><label><span class="nm" data-tip="Drops one unusually hot rent year into the index, so you can see what the 5% cap actually does.">One hot index year</span><span class="val" id="v_spike"></span></label>
+        <input type="range" id="spike" min="0" max="15" step="0.5">
+        <p class="hint">0 = off. Measured Cedar Rapids growth is 4.67%/yr, under the cap on
+        average, so the cap bites in single years rather than every year.</p></div>
+      <label class="chk"><input type="checkbox" id="cap">
+        <span>Enforce the 5%/yr buyout cap for months 1&ndash;24.
+        <b>Off by default</b> &mdash; 10%/yr throughout is the reported current pace,
+        reported verbally.
+        Check it to model a 5% cap in the first two years instead.</span></label>
+      <label class="chk"><input type="checkbox" id="autopace" checked>
+        <span>Buy equity at the pace that reaches 100% at month 180.
+        Uncheck to set it yourself &mdash; <b>0% is rent only</b>.</span></label>
+      <div class="ctl"><label><span class="nm" data-tip="How fast you buy Neeyah's share. From 20% down, <b>5.33%/yr</b> is the pace that reaches 100% at month 180. Slower is allowed; you just do not finish.">Equity bought per year</span>
+        <span class="val" id="v_pace"></span></label>
+        <input type="range" id="pace" min="0" max="10" step="0.01" value="5.33"></div>
+      <p class="hint" id="zerowarn" hidden></p>
+    </section>
+  </aside>
+
+  <main>
+    <div id="warn"></div>
+    <div class="stats" id="stats"></div>
+
+    <div class="panel card">
+      <h2>Where the money goes, month by month</h2>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--equity)"></i>Buying equity — you keep this</span>
+        <span><i class="sw" style="background:var(--rent)"></i>Rent — gone</span>
+        <span><i class="sw" style="background:var(--taxins)"></i>Tax + insurance</span>
+        <span><i class="sw" style="background:var(--upkeep)"></i>Upkeep</span>
+        <span><i class="sw" style="background:var(--hoa)"></i>HOA</span>
+      </div>
+      <canvas id="chart"></canvas>
+    </div>
+
+    <div class="panel card">
+      <h2>Sweep &mdash; where does the floor break?</h2>
+      <div class="sweeprow">
+        <select id="swvar">
+          <option value="price">Purchase price</option><option value="rent">Starting rent</option>
+          <option value="rg">Rent growth</option><option value="ap">Appreciation</option>
+          <option value="ig">Insurance growth</option><option value="incg">Income growth</option>
+          <option value="up">Upkeep</option>
+        </select>
+        <span class="answer" id="swans"></span>
+      </div>
+      <canvas id="sweep"></canvas>
+    </div>
+
+    <div class="panel card">
+      <h2>Year by year</h2>
+      <div class="tblwrap"><table id="tbl"></table></div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+<script>
+const M=180, RENT_CAP=.05, VALUE_CAP=.05, F24=.05, LATER=.10;
+
+/* buyout=null means AUTO: the pace that reaches 100% at month 180, catching up
+   after the first-24-month cap. An EXPLICIT rate is respected -- the cap clips
+   only months 1-24 and the requested pace resumes, bounded by the 10% ceiling. */
+function rates(i){
+  const target=1-i.down, auto=(i.buyout==null), base=auto?target/15:i.buyout;
+  if(!i.cap||base<=F24) return Array(M).fill(Math.min(base,LATER));
+  const rest=Math.min(LATER, auto?(target-F24*2)/13:base);
+  return Array(M).fill(0).map((_,m)=>m<24?F24:rest);
+}
+/* Fair Market Value: +5% cap up, none down. Prices buyouts. */
+const val=(i,y)=>i.price*Math.pow(1+(i.ap>0?Math.min(i.ap,VALUE_CAP):i.ap),y);
+/* Assessed Home Value: uncapped. What upkeep actually scales with. */
+const mval=(i,y)=>i.price*Math.pow(1+i.ap,y);
+const tax=(i,y)=>i.taxRate*i.price*Math.pow(1+i.taxg,y);
+const ins=(i,y)=>i.ins*Math.pow(1+i.ig,y);
+
+function expAdj(i,y,step){
+  let a=0;
+  if(i.ig>step) a+=ins(i,y)-ins(i,y-1);
+  if(i.taxg>step) a+=tax(i,y)-tax(i,y-1);
+  return a/12;
+}
+
+function run(i){
+  const r=rates(i); let eq=i.down, mvr=i.rent, mpr=i.rent, adj=0; const out=[];
+  for(let m=0;m<M;m++){
+    const y=Math.floor(m/12);
+    if(m&&m%12===0){
+      /* one hot year for the index, if asked for */
+      const g=(i.spike&&y===i.spikeY-1)?i.spike:i.rg;
+      let applied;
+      if(i.rcm==="carried"){
+        /* MVR follows the index uncapped; MPR tracks it but rises at most 5%/yr,
+           so a gap opens in a hot year and closes over the quiet years after. */
+        applied=g; mvr*=1+applied; mpr=Math.min(mvr,mpr*(1+RENT_CAP));
+      }else{
+        /* the excess never enters the base at all */
+        applied=Math.min(g,RENT_CAP); mvr*=1+applied; mpr=mvr;
+      }
+      const add=i.ea==="off"?0:expAdj(i,y,applied);
+      if(i.ea==="permanent"){mvr+=add;mpr+=add;adj=0} else adj=add;
+    }
+    /* you cannot buy past 100%. Without this clamp a fast pace drives equity
+       over 1.0 and rent goes NEGATIVE, which is nonsense, not a discount. */
+    const step=Math.min(r[m]/12,1-eq);
+    const v=val(i,y), buy=step*v, rent=(mpr+adj)*(1-eq),
+          ti=eq*(tax(i,y)+ins(i,y))/12, up=i.upkeep*mval(i,y)/12,
+          /* 100% resident, deliberately NOT scaled by eq */
+          hoa=i.hoa*Math.pow(1+i.hoag,y),
+          total=buy+rent+ti+up+hoa, income=i.income*Math.pow(1+i.incg,y);
+    out.push({m:m+1,y:y+1,eq,buy,rent,ti,up,hoa,total,income,left:income-total});
+    eq+=step;
+  }
+  return out;
+}
+function byYear(rows){
+  const out=[];
+  for(let y=0;y<15;y++){
+    const b=rows.slice(y*12,y*12+12), n=b.length, s=k=>b.reduce((a,r)=>a+r[k],0)/n;
+    out.push({y:y+1,ownS:b[0].eq,ownE:b[n-1].eq+(b[n-1].eq-b[n-2].eq),
+      buy:s("buy"),rent:s("rent"),ti:s("ti"),up:s("up"),hoa:s("hoa"),
+      total:s("total"),income:s("income"),left:s("left")});
+  }
+  return out;
+}
+
+/* Self-check: reproduce a known year-1 rent series on a $500K / 25%-down
+   reference case. The page will not render if it drifts. */
+const PRINTED=[2500,2486,2472,2458,2444,2431,2417,2403,2389,2375,2361,2347];
+function validate(){
+  const rows=run({price:5e5,down:.25,rent:2500/.75,rg:.035,ap:.025,taxRate:.01,taxg:0,
+    ins:1768,ig:0,upkeep:0,hoa:0,hoag:0,buyout:.05,cap:false,ea:"off",income:0,incg:0,
+    rcm:"forgiven",spike:0,spikeY:3});
+  let worst=0;
+  for(let k=0;k<12;k++) worst=Math.max(worst,Math.abs(rows[k].rent-PRINTED[k]));
+  return worst;
+}
+
+const PRESETS={
+  "Neeyah's basis":{rg:3.5,ap:2.5,ig:2.5,incg:0},
+  "Flat":{rg:0,ap:0,ig:0,incg:0},
+  "Contract max":{rg:5,ap:5,ig:5,incg:0},
+  "Hot market":{rg:5,ap:5,ig:5,incg:3},
+  "Stagflation":{rg:5,ap:0,ig:8,incg:1},
+  /* From real measured series.
+     rent  = HUD SAFMR 3BR, 6 CR ZIPs, FY21-26 CAGR (60% of the contract formula)
+     appr  = FHFA HPI CBSA 16300, 25-yr mean. Exceeded +5% in only 3 of 25 years.
+     ins   = PLACEHOLDER. No multi-year Iowa earned-premium series exists. */
+  "Cedar Rapids":{rg:4.67,ap:2.94,ig:6,incg:0},
+  "Cedar Rapids + wages":{rg:4.67,ap:2.94,ig:6,incg:3},
+};
+
+const $=id=>document.getElementById(id);
+const IDS=["price","down","rent","rg","ap","ig","incg","inc","floor","up"];
+const money=n=>"$"+Math.round(n).toLocaleString();
+
+const FIT = p => 283 + 0.00617 * p;          // Neeyah's value->rent table, fitted
+const SAFMR = 1512, ZORI = 1665;             // measured yardsticks, FY26 / 2026-07
+
+function read(){
+  /* the exact-entry box is the authority; the slider is a convenience that
+     writes into it. Reading from the slider would snap typed values to its
+     $5,000 step, which is the opposite of what an exact box is for. */
+  const price=+$("price_n").value || +$("price").value, linked=$("linkrent").checked;
+  const rent = linked ? FIT(price) : +$("rent").value;
+  if(linked) $("rent").value = Math.round(rent);
+  $("rent").disabled = linked;
+  return {price, down:+$("down").value/100, rent,
+    rg:+$("rg").value/100, ap:+$("ap").value/100, ig:+$("ig").value/100,
+    incg:+$("incg").value/100, income:(+$("inc_n").value||+$("inc").value),
+    taxRate:.0181, taxg:.025, ins:2300, upkeep:+$("up").value/100,
+    hoa:(+$("hoa_n").value||+$("hoa").value), hoag:+$("hoag").value/100,
+    buyout:$("autopace").checked?null:+$("pace").value/100,
+    cap:$("cap").checked, ea:$("ea").value,
+    rcm:$("rcm").value, spike:+$("spike").value/100, spikeY:3};
+}
+
+function draw(rows){
+  const c=$("chart"), dpr=devicePixelRatio||1, W=c.clientWidth,
+        /* the height CSS gave it, not a fixed number — see exit_explorer */
+        H=Math.round(c.getBoundingClientRect().height)||280, narrow=W<420;
+  c.width=W*dpr; c.height=H*dpr;
+  const x=c.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement),
+        col=k=>cs.getPropertyValue(k).trim(),
+        pad={l:narrow?42:52,r:narrow?16:20,t:10,b:22}, w=W-pad.l-pad.r, h=H-pad.t-pad.b,
+        max=Math.max(...rows.map(r=>r.total))*1.08,
+        X=m=>pad.l+w*m/(M-1), Y=v=>pad.t+h*(1-v/max);
+  x.strokeStyle=col("--line-soft"); x.lineWidth=1; x.fillStyle=col("--ink-3");
+  x.font='400 10px "IBM Plex Mono",monospace'; x.textAlign="right";
+  for(let g=0;g<=4;g++){
+    const v=max*g/4, y=Y(v);
+    x.beginPath(); x.moveTo(pad.l,y); x.lineTo(W-pad.r,y); x.stroke();
+    x.fillText("$"+Math.round(v/100)*100/1000+"k",pad.l-7,y+3);
+  }
+  const keys=[["buy","--equity"],["rent","--rent"],["ti","--taxins"],["up","--upkeep"],["hoa","--hoa"]];
+  const base=Array(M).fill(0);
+  keys.forEach(([k,c2])=>{
+    x.beginPath(); x.moveTo(X(0),Y(base[0]));
+    rows.forEach((r,m)=>x.lineTo(X(m),Y(base[m]+r[k])));
+    for(let m=M-1;m>=0;m--) x.lineTo(X(m),Y(base[m]));
+    x.closePath(); x.fillStyle=col(c2); x.globalAlpha=.9; x.fill(); x.globalAlpha=1;
+    rows.forEach((r,m)=>base[m]+=r[k]);
+  });
+  x.textAlign="center"; x.fillStyle=col("--ink-3");
+  for(let y=0;y<=15;y+=3){
+    const m=Math.min(M-1,y*12);
+    x.textAlign = y===0 ? "left" : (y===15 ? "right" : "center");
+    x.fillText("yr "+(y||1),X(m),H-6);
+  }
+  CH={rows,X,Y,pad,w,h,W,H};
+  if(HOVER!=null) readout(x,col);
+}
+
+/* Hover readout. The stacked bands answer "how much" but not "how much of what",
+   so pointing at a month spells that month out. Pointer events, so a touch drag
+   works the same way. */
+let CH=null, HOVER=null;
+const KEYS=[["Buying equity","--equity","buy"],["Rent","--rent","rent"],
+            ["Tax + insurance","--taxins","ti"],["Upkeep","--upkeep","up"],
+            ["HOA","--hoa","hoa"]];
+function readout(x,col){
+  const {rows,X,pad,w,h,W}=CH, m=Math.max(0,Math.min(M-1,HOVER)), r=rows[m], px=X(m);
+  x.save();
+  x.strokeStyle=col("--ink-3"); x.lineWidth=1; x.setLineDash([2,3]);
+  x.beginPath(); x.moveTo(px,pad.t); x.lineTo(px,pad.t+h); x.stroke(); x.setLineDash([]);
+  const money=v=>"$"+Math.round(v).toLocaleString();
+  const lines=KEYS.filter(([,,k])=>r[k]>0.5).map(([l,c2,k])=>[l,money(r[k]),c2])
+                  .concat([["Total",money(r.total),null],
+                           ["Money left",money(r.left),null]]);
+  x.font='400 11px "IBM Plex Sans",system-ui,sans-serif';
+  const lw=Math.max(...lines.map(t=>x.measureText(t[0]).width)),
+        vw=Math.max(...lines.map(t=>x.measureText(t[1]).width)),
+        bw=lw+vw+42, bh=26+lines.length*15+4;
+  let bx=px+14; if(bx+bw>W-4) bx=px-14-bw; if(bx<4) bx=4;
+  const by=pad.t+6;
+  x.fillStyle=col("--panel"); x.strokeStyle=col("--line"); x.lineWidth=1;
+  if(x.roundRect){ x.beginPath(); x.roundRect(bx,by,bw,bh,8); } else { x.beginPath(); x.rect(bx,by,bw,bh); }
+  x.fill(); x.stroke();
+  x.textAlign="left"; x.fillStyle=col("--ink-3");
+  x.font='400 10px "IBM Plex Mono",monospace';
+  x.fillText("yr "+(Math.floor(m/12)+1)+"  ·  mo "+(m+1),bx+12,by+16);
+  x.font='400 11px "IBM Plex Sans",system-ui,sans-serif';
+  lines.forEach(([l,v,c2],k)=>{
+    const yy=by+34+k*15;
+    if(c2){ x.fillStyle=col(c2); x.beginPath(); x.arc(bx+13,yy-3.5,3.2,0,7); x.fill(); }
+    x.fillStyle=col(c2?"--ink-2":"--ink"); x.textAlign="left";
+    x.fillText(l,bx+(c2?22:12),yy);
+    x.fillStyle=col("--ink"); x.textAlign="right";
+    x.fillText(v,bx+bw-12,yy);
+  });
+  x.restore();
+}
+(()=>{
+  const c=$("chart");
+  const at=e=>{
+    if(!CH) return null;
+    const b=c.getBoundingClientRect(), rel=(e.clientX-b.left-CH.pad.l)/CH.w;
+    return rel<-0.02||rel>1.02 ? null : Math.round(Math.min(1,Math.max(0,rel))*(M-1));
+  };
+  c.addEventListener("pointermove",e=>{ const m=at(e); if(m!==HOVER){ HOVER=m; draw(CH.rows); } });
+  c.addEventListener("pointerleave",()=>{ if(HOVER!==null){ HOVER=null; draw(CH.rows); } });
+})();
+
+const SW={price:["Purchase price",180000,360000,5000,v=>"$"+(v/1000).toFixed(0)+"k"],
+  rent:["Starting rent",1200,2600,50,v=>"$"+Math.round(v).toLocaleString()],
+  rg:["Rent growth",0,5,.25,v=>v.toFixed(1)+"%"],
+  ap:["Appreciation",-3,5,.5,v=>v.toFixed(1)+"%"],
+  ig:["Insurance growth",0,15,1,v=>v.toFixed(0)+"%"],
+  incg:["Income growth",0,6,.5,v=>v.toFixed(1)+"%"],
+  up:["Upkeep",.2,2,.1,v=>v.toFixed(2)+"%"]};
+
+function sweepData(field){
+  const [,lo,hi,step]=SW[field], base=read(), pts=[];
+  for(let v=lo;v<=hi+1e-9;v+=step){
+    const i={...base};
+    if(field==="price"){ i.price=v; if($("linkrent").checked) i.rent=FIT(v); }
+    else if(field==="rent") i.rent=v;
+    else if(field==="up") i.upkeep=v/100;
+    else i[field]=v/100;
+    pts.push({v,worst:Math.min(...byYear(run(i)).map(y=>y.left))});
+  }
+  return pts;
+}
+
+function drawSweep(field,floor){
+  const pts=sweepData(field), [label,,,,fmt]=SW[field],
+        c=$("sweep"), dpr=devicePixelRatio||1, W=c.clientWidth,
+        H=Math.round(c.getBoundingClientRect().height)||190, narrow=W<420;
+  c.width=W*dpr; c.height=H*dpr;
+  const x=c.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement), col=k=>cs.getPropertyValue(k).trim(),
+    pad={l:narrow?42:52,r:narrow?16:20,t:12,b:24}, w=W-pad.l-pad.r, h=H-pad.t-pad.b,
+    vals=pts.map(p=>p.worst).concat([floor]),
+    lo=Math.min(...vals)*.96, hi=Math.max(...vals)*1.04,
+    X=i=>pad.l+w*i/(pts.length-1), Y=v=>pad.t+h*(1-(v-lo)/(hi-lo));
+  x.strokeStyle=col("--line-soft"); x.fillStyle=col("--ink-3");
+  x.font='400 10px "IBM Plex Mono",monospace'; x.textAlign="right";
+  for(let g=0;g<=3;g++){ const v=lo+(hi-lo)*g/3, y=Y(v);
+    x.beginPath(); x.moveTo(pad.l,y); x.lineTo(W-pad.r,y); x.stroke();
+    x.fillText("$"+(Math.round(v/100)*100/1000).toFixed(1)+"k",pad.l-7,y+3); }
+  x.strokeStyle=col("--bad"); x.setLineDash([4,4]); x.lineWidth=1.5;
+  x.beginPath(); x.moveTo(pad.l,Y(floor)); x.lineTo(W-pad.r,Y(floor)); x.stroke();
+  x.setLineDash([]);
+  x.strokeStyle=col("--accent"); x.lineWidth=2; x.beginPath();
+  pts.forEach((p,i)=>i?x.lineTo(X(i),Y(p.worst)):x.moveTo(X(i),Y(p.worst)));
+  x.stroke();
+  // --- the intercept: exactly where the curve crosses the floor -------------
+  let ix=null, iv=null;
+  for(let i=1;i<pts.length;i++){
+    const a0=pts[i-1].worst, b0=pts[i].worst;
+    if((a0>=floor)!==(b0>=floor)){
+      const t=(floor-a0)/(b0-a0);                 // linear interpolation
+      ix=X(i-1)+t*(X(i)-X(i-1));
+      iv=pts[i-1].v+t*(pts[i].v-pts[i-1].v);
+      break;
+    }
+  }
+  if(ix!==null){
+    const failRight = pts[pts.length-1].worst < floor;
+    // tint the side that fails
+    x.fillStyle=col("--bad"); x.globalAlpha=.10;
+    x.fillRect(failRight?ix:pad.l, pad.t, failRight?(W-pad.r-ix):(ix-pad.l), h);
+    x.globalAlpha=1;
+    // the intercept line
+    x.strokeStyle=col("--bad"); x.lineWidth=1.5; x.setLineDash([3,3]);
+    x.beginPath(); x.moveTo(ix,pad.t); x.lineTo(ix,pad.t+h); x.stroke();
+    x.setLineDash([]);
+    // the point
+    x.fillStyle=col("--bad"); x.beginPath(); x.arc(ix,Y(floor),4.5,0,7); x.fill();
+    x.strokeStyle=col("--panel"); x.lineWidth=1.5; x.stroke();
+    // the label, kept inside the plot
+    x.font='500 11px "IBM Plex Mono",monospace'; x.fillStyle=col("--bad");
+    const lbl=fmt(iv), tw=x.measureText(lbl).width;
+    x.textAlign = (ix+tw+10>W-pad.r) ? "right" : "left";
+    x.fillText(lbl, ix + (x.textAlign==="right" ? -7 : 7), pad.t+11);
+  }
+
+  x.font='400 10px "IBM Plex Mono",monospace'; x.fillStyle=col("--ink-3");
+  x.textAlign="left"; x.fillText(fmt(pts[0].v),pad.l,H-7);
+  x.textAlign="right"; x.fillText(fmt(pts[pts.length-1].v),W-pad.r,H-7);
+  x.textAlign="center"; x.fillText(label,pad.l+w/2,H-7);
+
+  const a=$("swans"), allOk=pts.every(p=>p.worst>=floor), noneOk=pts.every(p=>p.worst<floor);
+  if(iv!==null){
+    const failRight = pts[pts.length-1].worst < floor;
+    a.className="answer";
+    a.innerHTML=`crosses $${floor.toLocaleString()}/mo at <b>${fmt(iv)}</b> &mdash; `+
+      `clears it ${failRight?"below":"above"} that`;
+  } else if(allOk){ a.className="answer";
+    a.innerHTML=`clears $${floor.toLocaleString()}/mo across the <b>whole range</b>`;
+  } else { a.className="answer none";
+    a.innerHTML=`<b>nothing in this range</b> clears $${floor.toLocaleString()}/mo`; }
+}
+
+function render(){
+  const i=read(), rows=run(i), ys=byYear(rows),
+        floor=(+$("floor_n").value||+$("floor").value);
+  $("v_price").textContent=money(i.price);
+  $("v_down").textContent=(i.down*100).toFixed(0)+"%";
+  $("v_rent").textContent=money(i.rent);
+  const vs=(n,l)=>`${l} <b>${Math.abs((i.rent/n-1)*100).toFixed(0)}% ${i.rent>=n?"above":"below"}</b>`;
+  $("renthint").innerHTML = `${vs(SAFMR,"vs HUD SAFMR 3BR $1,512:")}<br>${vs(ZORI,"vs Zillow single-family $1,665:")}`;
+  $("v_rg").textContent=(i.rg*100).toFixed(1)+"%";
+  $("v_ap").textContent=(i.ap*100).toFixed(1)+"%";
+  $("v_ig").textContent=(i.ig*100).toFixed(1)+"%";
+  $("v_incg").textContent=(i.incg*100).toFixed(1)+"%";
+  $("v_inc").textContent=money(i.income);
+  $("v_up").textContent=(i.upkeep*100).toFixed(2)+"%";
+  $("v_hoa").textContent=i.hoa?money(i.hoa)+"/mo":"none";
+  $("v_hoag").textContent=(i.hoag*100).toFixed(1)+"%";
+  $("v_spike").textContent=i.spike?((i.spike*100).toFixed(1)+"% in year "+i.spikeY):"off";
+
+  /* equity pace: display, auto-fill, and the 0%-is-not-ownership warning */
+  $("pace").disabled=$("autopace").checked;
+  if($("autopace").checked) $("pace").value=((1-i.down)/15*100).toFixed(2);
+  const pace=+$("pace").value, wz=$("zerowarn");
+  $("v_pace").textContent=pace.toFixed(2)+"%  ·  "+money(pace/100*i.price/12)+"/mo";
+  if(pace===0){
+    wz.hidden=false;
+    wz.innerHTML="🔴 <b>Zero equity: you stay at "+(i.down*100).toFixed(0)+"% forever.</b> "+
+      "The agreement then puts the house up for sale at year 15 unless a buyout is "+
+      "agreed, and Residents must vacate if it is unsold after 90 days. This is renting with "+
+      (i.down*100).toFixed(0)+"% of the upside &mdash; <b>not</b> a cheaper way to own.";
+  } else if(pace < (1-i.down)/15*100-0.005){
+    wz.hidden=false;
+    wz.innerHTML="⚠️ You reach <b>"+((i.down+pace/100*15)*100).toFixed(1)+
+      "%</b> by month 180, not 100%. The agreement directs a sale at term unless a "+
+      "Buyout is agreed.";
+  } else wz.hidden=true;
+  $("v_floor").textContent=money(floor);
+
+  const peak=ys.reduce((a,b)=>b.total>a.total?b:a),
+        tight=ys.reduce((a,b)=>b.left<a.left?b:a),
+        paid=rows.reduce((a,r)=>a+r.total,0),
+        rentTot=rows.reduce((a,r)=>a+r.rent,0),
+        finalEq=ys[14].ownE;
+  $("stats").innerHTML=[
+    ["Year 1",money(ys[0].total),"average month"],
+    ["Peak",money(peak.total),"year "+peak.y,peak.total/peak.income>.35?"flag":""],
+    ["Least money left",money(tight.left),"year "+tight.y,tight.left<floor?"flag":"good"],
+    ["% at peak",(peak.total/peak.income*100).toFixed(1)+"%","cross-check only"],
+    ["Rent, 15 yrs",money(rentTot),"never comes back"],
+    ["Total paid",money(paid),"ends at "+(finalEq*100).toFixed(1)+"% owned"],
+  ].map(([k,v,n,cl])=>`<div class="stat ${cl||""}"><div class="k">${k}</div>
+    <div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
+
+  const w=[];
+  if(i.ap>=.04&&i.incg<=0) w.push("Appreciation at 4%+ with income growth at 0% — values and wages rarely diverge that far for 15 years. Read this as a bound, not a scenario.");
+  if(finalEq<.999) w.push(`This pace ends at ${(finalEq*100).toFixed(1)}% owned, not 100%. At term the agreement points to a sale unless a buyout is agreed.`);
+  $("warn").innerHTML=w.map(t=>`<div class="warnbox">${t}</div>`).join("");
+
+  $("tbl").innerHTML=`<thead><tr><th>Year</th><th>Own Jan 1</th><th>Own Dec 31</th>
+    <th>Buy</th><th>Rent</th><th>Tax+ins</th><th>Upkeep</th><th>Total</th><th title="Your take-home minus everything in this row">Money left</th></tr></thead>
+    <tbody>${ys.map(y=>`<tr class="${y.left<floor?"under":""} ${y===peak?"peak":""}">
+    <td>${y.y}</td><td>${(y.ownS*100).toFixed(1)}%</td><td>${(y.ownE*100).toFixed(1)}%</td>
+    <td>${money(y.buy)}</td><td>${money(y.rent)}</td><td>${money(y.ti)}</td>
+    <td>${money(y.up)}</td><td>${money(y.total)}</td><td>${money(y.left)}</td></tr>`).join("")}</tbody>`;
+  draw(rows);
+  drawSweep($("swvar").value,floor);
+}
+
+$("presets").innerHTML=Object.keys(PRESETS)
+  .map(k=>`<button type="button" aria-pressed="false">${k}</button>`).join("");
+$("presets").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const p=PRESETS[b.textContent];
+  $("rg").value=p.rg; $("ap").value=p.ap; $("ig").value=p.ig; $("incg").value=p.incg;
+  [...$("presets").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
+  render();
+});
+IDS.concat(["pace"]).forEach(id=>$(id).addEventListener("input",render));
+["autopace"].forEach(id=>$(id).addEventListener("change",render));
+["cap","ea","linkrent","swvar","rcm"].forEach(id=>$(id).addEventListener("change",render));
+$("spike").addEventListener("input",render);
+/* the exact-entry box drives the slider, and is clamped to the slider's range
+   only when it would otherwise fall outside it */
+/* slider -> box, so dragging keeps the exact box honest */
+$("price").addEventListener("input",()=>{ $("price_n").value=$("price").value; });
+$("hoa").addEventListener("input",()=>{ $("hoa_n").value=$("hoa").value; });
+[["inc","inc_n",500],["floor","floor_n",500]].forEach(([rng,num,step])=>{
+  $(rng).addEventListener("input",()=>{ $(num).value=$(rng).value; });
+  $(num).addEventListener("input",()=>{
+    const el=$(rng), v=+$(num).value;
+    if(!isFinite(v)||v<0) return;
+    if(v<+el.min) el.min=Math.floor(v/step)*step;
+    if(v>+el.max) el.max=Math.ceil(v/step)*step;
+    el.value=v; render();
+  });
+});
+$("hoa_n").addEventListener("input",()=>{
+  const el=$("hoa"), v=+$("hoa_n").value;
+  if(!isFinite(v)||v<0) return;
+  if(v>+el.max) el.max=Math.ceil(v/50)*50;
+  el.value=v; render();
+});
+$("hoag").addEventListener("input",render);
+/* box -> slider, widening the slider's range if the typed number sits outside it */
+$("price_n").addEventListener("input",()=>{
+  const el=$("price"), v=+$("price_n").value;
+  if(!isFinite(v)||v<=0) return;
+  if(v<+el.min) el.min=Math.floor(v/5000)*5000;
+  if(v>+el.max) el.max=Math.ceil(v/5000)*5000;
+  el.value=v; render();
+});
+addEventListener("resize",()=>render());
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>render());
+
+Object.assign($("price"),{value:215000}); Object.assign($("price_n"),{value:215000});
+
+Object.assign($("spike"),{value:0}); Object.assign($("down"),{value:20});
+Object.assign($("rent"),{value:1825}); Object.assign($("rg"),{value:3.5});
+Object.assign($("ap"),{value:2.5}); Object.assign($("ig"),{value:2.5});
+/* A deliberate placeholder, not a measured figure. Move the slider to your own.
+   NOTE: the slider min is 4000. A default below the min is silently clamped by the browser -
+   if you lower this again, check the min first. */
+Object.assign($("incg"),{value:0}); Object.assign($("inc"),{value:5500});
+Object.assign($("floor"),{value:2500});
+/* the exact boxes are the authority in read(), so they must be seeded to match the
+   sliders above - including the deliberate income placeholder. */
+Object.assign($("inc_n"),{value:5500}); Object.assign($("floor_n"),{value:2500});
+/* 1.1% = midpoint of the repair model's 1.08-1.42%. That band is ALREADY the resident's
+   net share, so this line is applied in full and carries no further share scaling. */
+Object.assign($("up"),{value:1.1});
+$("presets").firstElementChild.setAttribute("aria-pressed","true");
+
+/* The check still runs on every load and still refuses to render on failure.
+   It just says nothing when it passes. */
+const worst=validate(), ok=worst<=0.5;
+$("valid").hidden=ok;
+$("valid").className="badge fail";
+$("validtxt").innerHTML=`<b>VALIDATION FAILED</b> — off by $${worst.toFixed(2)}`;
+render();
+
+/* ------------------------------------------------------------------ tips
+   Every [data-tip] gets a small button. Hover shows it on a mouse; tap pins
+   it on a touch screen, where there is no hover to rely on. */
+(()=>{
+  const tip=document.createElement("div");
+  tip.id="tip"; tip.hidden=true; tip.setAttribute("role","tooltip");
+  document.body.appendChild(tip);
+  let cur=null, pinned=false;
+  const hide=()=>{ if(cur) cur.setAttribute("aria-expanded","false");
+    cur=null; tip.hidden=true; };
+  const show=b=>{
+    if(cur&&cur!==b) cur.setAttribute("aria-expanded","false");
+    cur=b; tip.innerHTML=b.dataset.tip; tip.hidden=false;
+    tip.style.left="-9999px"; tip.style.top="0px";
+    const r=b.getBoundingClientRect(), t=tip.getBoundingClientRect();
+    let x=Math.max(8,Math.min(r.left+r.width/2-t.width/2,innerWidth-t.width-8));
+    let y=r.bottom+8; if(y+t.height>innerHeight-8) y=r.top-t.height-8;
+    tip.style.left=x+"px"; tip.style.top=Math.max(8,y)+"px";
+    b.setAttribute("aria-expanded","true");
+  };
+  document.querySelectorAll("[data-tip]").forEach(host=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="tipbtn"; b.textContent="i";
+    b.setAttribute("aria-label","What is this?");
+    b.setAttribute("aria-expanded","false");
+    b.dataset.tip=host.dataset.tip;
+    host.appendChild(b);
+    b.addEventListener("mouseenter",()=>{ if(!pinned) show(b); });
+    b.addEventListener("mouseleave",()=>{ if(!pinned) hide(); });
+    b.addEventListener("focus",()=>show(b));
+    b.addEventListener("blur",()=>{ if(!pinned) hide(); });
+    b.addEventListener("click",e=>{
+      e.preventDefault(); e.stopPropagation();
+      if(pinned&&cur===b){ pinned=false; hide(); } else { pinned=true; show(b); }
+    });
+  });
+  document.addEventListener("click",e=>{
+    if(!e.target.closest(".tipbtn")){ pinned=false; hide(); } });
+  addEventListener("scroll",()=>{ pinned=false; hide(); },true);
+  addEventListener("resize",()=>{ pinned=false; hide(); });
+  addEventListener("keydown",e=>{ if(e.key==="Escape"){ pinned=false; hide(); } });
+})();
+</script>
+</body>
+</html>
